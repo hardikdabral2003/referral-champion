@@ -41,6 +41,7 @@ interface User {
   _id?: string;
   name: string;
   email: string;
+  password?: string;
   phone?: string;
   isReferred: boolean;
   referredBy?: string;
@@ -61,6 +62,11 @@ interface AnalyticsData {
   conversionRate: number;
 }
 
+interface AuthResponse {
+  user: User;
+  token: string;
+}
+
 // Helper function to transform MongoDB _id to id
 const transformResponse = (data: any) => {
   if (Array.isArray(data)) {
@@ -77,7 +83,73 @@ const transformResponse = (data: any) => {
   return data;
 };
 
+// Helper to set auth token for requests
+const setAuthToken = (token: string | null) => {
+  if (token) {
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete apiClient.defaults.headers.common['Authorization'];
+  }
+};
+
 export const api = {
+  // Auth
+  register: async (userData: Omit<User, "id" | "isReferred">): Promise<AuthResponse> => {
+    try {
+      const response = await apiClient.post('/auth/register', userData);
+      const { token } = response.data;
+      if (token) {
+        localStorage.setItem('token', token);
+        setAuthToken(token);
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error registering user:', error);
+      throw error;
+    }
+  },
+
+  login: async (email: string, password: string): Promise<AuthResponse> => {
+    try {
+      const response = await apiClient.post('/auth/login', { email, password });
+      const { token } = response.data;
+      if (token) {
+        localStorage.setItem('token', token);
+        setAuthToken(token);
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error logging in:', error);
+      throw error;
+    }
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    setAuthToken(null);
+  },
+
+  // Initialize auth from stored token
+  initAuth: () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setAuthToken(token);
+      return token;
+    }
+    return null;
+  },
+
+  // Get current user
+  getCurrentUser: async (): Promise<User | null> => {
+    try {
+      const response = await apiClient.get('/auth/me');
+      return transformResponse(response.data);
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+      return null;
+    }
+  },
+
   // Campaigns
   getCampaigns: async (): Promise<Campaign[]> => {
     try {
@@ -211,18 +283,22 @@ export const api = {
   // Analytics
   getAnalytics: async (campaignId?: string): Promise<AnalyticsData> => {
     try {
-      // For now, we'll calculate analytics from referrals
-      const referrals = await this.getReferrals(campaignId);
-      
-      const totalClicks = referrals.reduce((sum, r) => sum + r.clicks, 0);
-      const totalConversions = referrals.reduce((sum, r) => sum + r.conversions, 0);
-      const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0;
-      
-      return {
-        totalClicks,
-        totalConversions,
-        conversionRate
-      };
+      if (campaignId) {
+        const referrals = await api.getReferrals(campaignId);
+        
+        const totalClicks = referrals.reduce((sum, r) => sum + r.clicks, 0);
+        const totalConversions = referrals.reduce((sum, r) => sum + r.conversions, 0);
+        const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0;
+        
+        return {
+          totalClicks,
+          totalConversions,
+          conversionRate
+        };
+      } else {
+        const response = await apiClient.get('/analytics');
+        return response.data;
+      }
     } catch (error) {
       console.error('Error calculating analytics:', error);
       return {
@@ -265,3 +341,6 @@ export const api = {
     }
   }
 };
+
+// Initialize token on load
+api.initAuth();

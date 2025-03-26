@@ -1,18 +1,23 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@/services/api";
 
 interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  isReferred?: boolean;
+  referredBy?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: () => void;
-  logout: () => void;
   loading: boolean;
+  setUser: (user: User) => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,12 +31,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check for existing session
     const checkAuth = async () => {
       try {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        setLoading(true);
+        
+        // Get token from local storage (set by api.login)
+        const token = api.initAuth();
+        
+        if (token) {
+          // Fetch current user
+          const currentUser = await api.getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser as User);
+          }
         }
       } catch (error) {
         console.error("Auth check failed:", error);
+        // If token is invalid, remove it
+        api.logout();
       } finally {
         setLoading(false);
       }
@@ -40,24 +55,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkAuth();
   }, []);
 
-  const login = () => {
-    // For demo purposes, we'll just simulate a login
-    const demoUser = {
-      id: "user-" + Math.random().toString(36).substr(2, 9),
-      name: "Demo User",
-      email: "demo@example.com",
-    };
-    setUser(demoUser);
-    localStorage.setItem("user", JSON.stringify(demoUser));
-    toast({
-      title: "Logged in successfully",
-      description: "Welcome back, Demo User!",
-    });
+  const login = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      const { user: authUser } = await api.login(email, password);
+      setUser(authUser);
+      toast({
+        title: "Logged in successfully",
+        description: `Welcome back, ${authUser.name}!`,
+      });
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
+    api.logout();
     setUser(null);
-    localStorage.removeItem("user");
     toast({
       title: "Logged out",
       description: "You've been logged out successfully.",
@@ -65,7 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, loading, setUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
