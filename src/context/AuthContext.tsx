@@ -18,6 +18,7 @@ interface AuthContextType {
   setUser: (user: User) => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  redirectToLogin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,7 +41,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Fetch current user
           const currentUser = await api.getCurrentUser();
           if (currentUser) {
-            setUser(currentUser as User);
+            setUser({
+              id: currentUser.id || currentUser._id || '',
+              name: currentUser.name,
+              email: currentUser.email,
+              phone: currentUser.phone,
+              isReferred: currentUser.isReferred,
+              referredBy: currentUser.referredBy
+            });
           }
         }
       } catch (error) {
@@ -59,7 +67,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setLoading(true);
       const { user: authUser } = await api.login(email, password);
-      setUser(authUser);
+      setUser({
+        id: authUser.id || authUser._id || '',
+        name: authUser.name,
+        email: authUser.email,
+        phone: authUser.phone,
+        isReferred: authUser.isReferred,
+        referredBy: authUser.referredBy
+      });
       toast({
         title: "Logged in successfully",
         description: `Welcome back, ${authUser.name}!`,
@@ -81,8 +96,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+  // Helper function to redirect to login page
+  const redirectToLogin = () => {
+    window.location.href = '/login';
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, setUser, login, logout, redirectToLogin }}>
       {children}
     </AuthContext.Provider>
   );

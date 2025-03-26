@@ -49,7 +49,14 @@ const Signup = () => {
         phone: formData.phone,
       });
       
-      setUser(user);
+      setUser({
+        id: user.id || user._id || '',
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        isReferred: user.isReferred,
+        referredBy: user.referredBy
+      });
       
       toast({
         title: "Account created!",

@@ -12,7 +12,7 @@ import { api } from "@/services/api";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const { user, login } = useAuth();
+  const { user, redirectToLogin } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("campaigns");
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -78,6 +78,11 @@ const Dashboard = () => {
     setSelectedCampaign(campaignId);
   };
 
+  // Handle login button click
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
   if (!user) {
     return (
       <div className="page-container flex flex-col items-center justify-center min-h-[80vh]">
@@ -86,7 +91,7 @@ const Dashboard = () => {
           <p className="text-muted-foreground mb-6">
             Please sign in to access your referral dashboard.
           </p>
-          <Button onClick={login} className="w-full">
+          <Button onClick={handleLoginClick} className="w-full">
             Sign In
           </Button>
         </div>

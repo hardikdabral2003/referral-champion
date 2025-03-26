@@ -4,6 +4,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import auth from '../middleware/auth';
+import { Request } from 'express';
+
+// Extend the Express Request interface
+interface AuthRequest extends Request {
+  user?: any;
+}
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'referralcampaignsecret';
@@ -122,7 +128,7 @@ router.post('/login', async (req, res) => {
 // @route   GET api/auth/me
 // @desc    Get current user
 // @access  Private
-router.get('/me', auth, async (req, res) => {
+router.get('/me', auth, async (req: AuthRequest, res) => {
   try {
     // Get user without password
     const user = await User.findById(req.user.id).select('-password');

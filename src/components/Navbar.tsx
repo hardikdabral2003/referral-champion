@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { Menu, X } from "lucide-react";
@@ -8,8 +8,9 @@ import { Menu, X } from "lucide-react";
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, login, logout } = useAuth();
+  const { user, logout, redirectToLogin } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +24,11 @@ const Navbar = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Handle login button click
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
 
   return (
     <header
@@ -71,7 +77,7 @@ const Navbar = () => {
                 Sign Out
               </Button>
             ) : (
-              <Button onClick={login} className="ml-4">
+              <Button onClick={handleLoginClick} className="ml-4">
                 Sign In
               </Button>
             )}
@@ -125,7 +131,10 @@ const Navbar = () => {
                 Sign Out
               </Button>
             ) : (
-              <Button onClick={login} className="w-full mt-2">
+              <Button 
+                onClick={handleLoginClick} 
+                className="w-full mt-2"
+              >
                 Sign In
               </Button>
             )}
