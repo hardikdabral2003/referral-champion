@@ -1,27 +1,41 @@
 
-// This script is used to start the Express server
-const { spawn } = require('child_process');
-const path = require('path');
+// This script ensures the server starts properly
+import dotenv from 'dotenv';
+import { spawn } from 'child_process';
 
-// Path to the server file
-const serverPath = path.resolve(__dirname, '../server/server.ts');
+// Load environment variables
+dotenv.config();
 
-// Start the server using ts-node
-const server = spawn('npx', ['ts-node', serverPath], {
+// Start the server
+const server = spawn('node', ['src/server/server.ts'], {
   stdio: 'inherit',
-  shell: true
+  env: {
+    ...process.env,
+    NODE_ENV: 'development',
+    PORT: process.env.PORT || '5000',
+  },
 });
 
-console.log(`Server started with PID: ${server.pid}`);
-
-// Handle server exit
-server.on('close', (code) => {
-  console.log(`Server process exited with code ${code}`);
+// Handle server events
+server.on('error', (error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
 
-// Handle SIGINT for clean shutdown
+server.on('exit', (code) => {
+  if (code !== 0) {
+    console.error(`Server exited with code ${code}`);
+    process.exit(code);
+  }
+});
+
+// Listen for termination signals
 process.on('SIGINT', () => {
-  console.log('Stopping server...');
   server.kill('SIGINT');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  server.kill('SIGTERM');
   process.exit(0);
 });
