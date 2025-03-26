@@ -66,9 +66,18 @@ const Signup = () => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Registration error:", error);
+      let errorMessage = "Registration failed. Please try again with different credentials.";
+      
+      // Extract more specific error message if available
+      if (error.response?.data?.msg) {
+        errorMessage = error.response.data.msg;
+      } else if (error.message === "Network Error") {
+        errorMessage = "Cannot connect to server. Please try again later.";
+      }
+      
       toast({
         title: "Registration failed",
-        description: error.response?.data?.msg || "Please try again with different credentials.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
